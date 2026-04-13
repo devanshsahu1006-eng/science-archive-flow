@@ -10,7 +10,7 @@ const InkLoader = () => {
         transition={{ duration: 1.5 }}
       >
         <h1 className="font-display text-3xl sm:text-5xl text-ink tracking-wider">
-          THE SCIENCE LEGENDS
+          THE SCIENCE ARCHIVE
         </h1>
         <motion.p
           className="font-handwritten text-lg sm:text-xl text-ink-light mt-2"

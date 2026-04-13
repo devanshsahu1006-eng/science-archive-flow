@@ -181,7 +181,21 @@ const Index = () => {
                     SUBJECT: HISTORY OF SCIENCE · GRADE: S-TIER · SEMESTER: ALL
                   </p>
                   <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-ink tracking-tight font-bold">
-                    THE SCIENCE LEGENDS ARCHIVE
+                    {"THE SCIENCE ARCHIVE".split("").map((char, i) => (
+                      <motion.span
+                        key={i}
+                        initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        transition={{
+                          duration: 0.6,
+                          delay: i * 0.05,
+                          ease: [0.25, 0.46, 0.45, 0.94],
+                        }}
+                        style={{ display: "inline-block" }}
+                      >
+                        {char === " " ? "\u00A0" : char}
+                      </motion.span>
+                    ))}
                   </h1>
                   <p className="font-handwritten text-base sm:text-lg text-ink-light mt-2">
                     — math × physics × space × frontier science edition —
@@ -246,7 +260,7 @@ const Index = () => {
               <div className="h-px flex-1 max-w-[100px] bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
             </div>
             <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-ink tracking-tight">
-              THE SCIENCE LEGENDS
+              THE SCIENCE ARCHIVE
             </h2>
             <p className="font-handwritten text-base sm:text-lg text-ink-light mt-2">
               — math × physics edition, vol. I —
