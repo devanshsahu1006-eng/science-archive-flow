@@ -13,12 +13,36 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ["'Special Elite'", "monospace"],
+        body: ["'Lora'", "serif"],
+        handwritten: ["'Caveat'", "cursive"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        ink: {
+          DEFAULT: "hsl(var(--ink))",
+          light: "hsl(var(--ink-light))",
+          math: "hsl(var(--ink-math))",
+          physics: "hsl(var(--ink-physics))",
+        },
+        gold: "hsl(var(--gold))",
+        leather: {
+          DEFAULT: "hsl(var(--leather))",
+          light: "hsl(var(--leather-light))",
+        },
+        wood: {
+          DEFAULT: "hsl(var(--wood))",
+          light: "hsl(var(--wood-light))",
+        },
+        paper: {
+          DEFAULT: "hsl(var(--paper))",
+          dark: "hsl(var(--paper-dark))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
