@@ -49,7 +49,7 @@ const Index = () => {
 
   useEffect(() => {
     document.body.classList.add("custom-cursor");
-    const timer = setTimeout(() => setLoading(false), 2200);
+    const timer = setTimeout(() => setLoading(false), 5000);
     return () => {
       clearTimeout(timer);
       document.body.classList.remove("custom-cursor");
