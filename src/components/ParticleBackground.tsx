@@ -3,20 +3,26 @@ import { useEffect, useRef, useState } from "react";
 interface Particle {
   x: number;
   y: number;
-  originX: number;
-  originY: number;
   vx: number;
   vy: number;
   size: number;
   color: string;
   alpha: number;
+  shape: "dot" | "dash" | "circle";
+  rotation: number;
+  rotSpeed: number;
 }
+
+const PARTICLE_COUNT = 120;
+const CURSOR_RADIUS = 140;
+const BLOCK_PADDING = 18;
 
 const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const animRef = useRef<number>(0);
+  const targetRectsRef = useRef<DOMRect[]>([]);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -33,50 +39,92 @@ const ParticleBackground = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const darkColors = [
+      "rgba(200,190,160,",
+      "rgba(220,200,150,",
+      "rgba(180,160,220,",  // purple-ish
+      "rgba(220,170,120,",  // orange-ish
+      "rgba(150,180,220,",  // blue-ish
+    ];
+    const lightColors = [
+      "rgba(80,60,180,",    // purple
+      "rgba(200,80,60,",    // red
+      "rgba(60,60,200,",    // blue
+      "rgba(220,160,40,",   // gold
+      "rgba(80,160,80,",    // green
+    ];
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       initParticles();
     };
 
-    const darkColors = [
-      "rgba(200,190,160,", // warm light
-      "rgba(180,170,140,",
-      "rgba(220,200,150,",
-      "rgba(160,150,130,",
-      "rgba(190,180,160,",
-    ];
-
-    const lightColors = [
-      "rgba(60,40,20,",   // dark brown
-      "rgba(80,55,30,",
-      "rgba(50,35,15,",
-      "rgba(70,50,25,",
-      "rgba(90,65,35,",
-    ];
+    const shapes: Particle["shape"][] = ["dot", "dash", "circle"];
 
     const initParticles = () => {
-      const count = Math.min(300, Math.floor((canvas.width * canvas.height) / 6000));
       const colors = isDark ? darkColors : lightColors;
-      particlesRef.current = Array.from({ length: count }, () => {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        return {
-          x,
-          y,
-          originX: x,
-          originY: y,
-          vx: 0,
-          vy: 0,
-          size: Math.random() * 2.5 + 0.8,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          alpha: Math.random() * 0.5 + (isDark ? 0.15 : 0.25),
-        };
-      });
+      particlesRef.current = Array.from({ length: PARTICLE_COUNT }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        size: Math.random() * 3 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.6 + 0.2,
+        shape: shapes[Math.floor(Math.random() * shapes.length)],
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.04,
+      }));
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
+
+      // Detect hovered info blocks
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (el) {
+        const block = el.closest("[data-particle-block]") as HTMLElement | null;
+        if (block) {
+          targetRectsRef.current = [block.getBoundingClientRect()];
+        } else {
+          targetRectsRef.current = [];
+        }
+      }
+    };
+
+    const getTargetForParticle = (p: Particle, mouse: { x: number; y: number }, rects: DOMRect[]) => {
+      // If hovering a block, particles surround the block edges
+      if (rects.length > 0) {
+        const rect = rects[0];
+        const pad = BLOCK_PADDING;
+        // Find the closest point on the rectangle perimeter
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const angle = Math.atan2(p.y - cy, p.x - cx);
+        
+        // Place particles along the perimeter with some randomness based on particle id
+        const hw = rect.width / 2 + pad;
+        const hh = rect.height / 2 + pad;
+        
+        // Clamp to rectangle edge
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+        const scale = Math.min(hw / (Math.abs(cosA) + 0.001), hh / (Math.abs(sinA) + 0.001));
+        
+        return {
+          x: cx + cosA * scale,
+          y: cy + sinA * scale,
+          strength: 0.06,
+        };
+      }
+
+      // Otherwise, surround the cursor
+      return {
+        x: mouse.x,
+        y: mouse.y,
+        strength: 0.03,
+      };
     };
 
     const animate = () => {
@@ -84,42 +132,81 @@ const ParticleBackground = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const mouse = mouseRef.current;
-      const repelRadius = 120;
-      const repelStrength = 8;
-      const friction = 0.92;
-      const returnSpeed = 0.04;
+      const rects = targetRectsRef.current;
 
       for (const p of particlesRef.current) {
-        const dx = p.x - mouse.x;
-        const dy = p.y - mouse.y;
+        const target = getTargetForParticle(p, mouse, rects);
+
+        const dx = target.x - p.x;
+        const dy = target.y - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < repelRadius && dist > 0) {
-          const force = (1 - dist / repelRadius) * repelStrength;
-          const angle = Math.atan2(dy, dx);
-          p.vx += Math.cos(angle) * force;
-          p.vy += Math.sin(angle) * force;
+        if (rects.length > 0) {
+          // Attract to block perimeter
+          if (dist > 5) {
+            p.vx += (dx / dist) * target.strength * Math.min(dist, 200);
+            p.vy += (dy / dist) * target.strength * Math.min(dist, 200);
+          }
+          // Orbit slightly
+          p.vx += (dy / (dist + 50)) * 0.3;
+          p.vy -= (dx / (dist + 50)) * 0.3;
+        } else if (dist < CURSOR_RADIUS * 3) {
+          // Attract toward cursor orbit
+          const orbitDist = CURSOR_RADIUS * (0.4 + (p.size / 4) * 0.6);
+          const toDist = dist - orbitDist;
+          if (Math.abs(toDist) > 5) {
+            p.vx += (dx / dist) * target.strength * toDist;
+            p.vy += (dy / dist) * target.strength * toDist;
+          }
+          // Orbit
+          p.vx += (dy / (dist + 30)) * 0.4;
+          p.vy -= (dx / (dist + 30)) * 0.4;
+        } else {
+          // Gentle drift when far
+          p.vx += (Math.random() - 0.5) * 0.1;
+          p.vy += (Math.random() - 0.5) * 0.1;
         }
 
-        // Return to origin
-        p.vx += (p.originX - p.x) * returnSpeed;
-        p.vy += (p.originY - p.y) * returnSpeed;
-
         // Friction
-        p.vx *= friction;
-        p.vy *= friction;
+        p.vx *= 0.94;
+        p.vy *= 0.94;
 
         p.x += p.vx;
         p.y += p.vy;
 
-        // Floating drift
-        p.x += Math.sin(Date.now() * 0.001 + p.originX) * 0.15;
-        p.y += Math.cos(Date.now() * 0.0008 + p.originY) * 0.15;
+        // Wrap around edges
+        if (p.x < -10) p.x = canvas.width + 10;
+        if (p.x > canvas.width + 10) p.x = -10;
+        if (p.y < -10) p.y = canvas.height + 10;
+        if (p.y > canvas.height + 10) p.y = -10;
 
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        p.rotation += p.rotSpeed;
+
+        // Draw
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
         ctx.fillStyle = p.color + p.alpha + ")";
-        ctx.fill();
+        ctx.strokeStyle = p.color + (p.alpha * 0.8) + ")";
+
+        if (p.shape === "dot") {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (p.shape === "dash") {
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-p.size * 2, 0);
+          ctx.lineTo(p.size * 2, 0);
+          ctx.stroke();
+        } else {
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size * 1.2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
       }
 
       animRef.current = requestAnimationFrame(animate);
@@ -141,7 +228,7 @@ const ParticleBackground = () => {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-[1]"
-      style={{ opacity: isDark ? 0.6 : 0.8 }}
+      style={{ opacity: isDark ? 0.7 : 0.9 }}
     />
   );
 };
