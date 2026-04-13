@@ -218,34 +218,34 @@ const Index = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
         >
-          <HistoryOfScience />
+          <HistoryOfScience data-particle-block />
         </motion.div>
 
         <Divider />
 
         {/* === SECTION 2: Medical History === */}
-        <div id="medical">
+        <div id="medical" data-particle-block>
           <MedicalHistory />
         </div>
 
         <Divider />
 
         {/* === SECTION 3: Technical Achievements === */}
-        <div id="technical">
+        <div id="technical" data-particle-block>
           <TechnicalAchievements />
         </div>
 
         <Divider />
 
         {/* === SECTION 4: Space Exploration === */}
-        <div id="space">
+        <div id="space" data-particle-block>
           <SpaceExploration />
         </div>
 
         <Divider />
 
         {/* === SECTION 5: Developing / Frontier Science === */}
-        <div id="frontier">
+        <div id="frontier" data-particle-block>
           <DevelopingScience />
         </div>
 
